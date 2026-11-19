@@ -1,37 +1,67 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "game.h"
 #include "ui_renderer.h"
+#include "file_io.h"
+
 
 static void run_game_session(GameType type) {
     GameSession session;
     memset(&session, 0, sizeof(GameSession));
-    session.type = type;
-    session.state = RUNNING;
-    session.score = 0;
-    session.moves = 0;
 
-    ui_read_line("Enter player name: ", session.player_name, sizeof(session.player_name));
+    int loaded = 0;
 
-    // Sample snake nodes for board display testing
+    printf("\n1. Load Saved Game\n");
+    printf("2. Start New Game\n");
+
+    int choice = ui_get_menu_choice(1, 2);
+
+    if (choice == 1) {
+        if (load_game_state(&session)) {
+            loaded = 1;
+            printf("\nSaved Game Loaded Successfully!\n");
+            ui_pause();
+        } else {
+            printf("\nNo saved game found. Starting a new game.\n");
+            ui_pause();
+        }
+    }
+
+    // Sample snake nodes for a new game
     SnakeNode body_node = { {4, 5}, NULL };
     SnakeNode head_node = { {5, 5}, &body_node };
 
-    if (type == GAME_TIC_TAC_TOE) {
-        session.current_symbol = 'X';
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                session.board[i][j] = ' ';
+    if (!loaded) {
+        session.type = type;
+        session.state = RUNNING;
+        session.score = 0;
+        session.moves = 0;
+
+        ui_read_line("Enter player name: ",
+                     session.player_name,
+                     sizeof(session.player_name));
+
+        if (type == GAME_TIC_TAC_TOE) {
+            session.current_symbol = 'X';
+
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    session.board[i][j] = ' ';
+                }
             }
+        } else {
+            session.snake_head = &head_node;
+            session.food.x = 10;
+            session.food.y = 7;
         }
     } else {
-        session.snake_head = &head_node;
-        session.food.x = 10;
-        session.food.y = 7;
+        session.state = RUNNING;
     }
 
     while (session.state != GAME_OVER) {
         ui_clear_screen();
+
         if (session.type == GAME_TIC_TAC_TOE) {
             ui_print_ttt_board(&session);
         } else {
@@ -63,7 +93,11 @@ static void run_game_session(GameType type) {
             }
             ui_pause();
         } else if (action == 4) {
-            printf("\nGame Progress Saved!\n");
+            if (save_game_state(&session)) {
+                printf("\nGame Progress Saved Successfully!\n");
+            } else {
+                printf("\nUnable to Save Game!\n");
+            }
             ui_pause();
         } else if (action == 5) {
             session.state = GAME_OVER;
@@ -73,13 +107,25 @@ static void run_game_session(GameType type) {
             break;
         }
     }
+
+    // Free memory only when a saved game was loaded
+    if (loaded) {
+        SnakeNode *current = session.snake_head;
+
+        while (current != NULL) {
+            SnakeNode *temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
 }
 
+
 int main(void) {
-    // Sample leaderboard entries for display testing
-    ScoreNode score2 = { "Bob", GAME_TIC_TAC_TOE, 100, NULL };
-    ScoreNode score1 = { "Alice", GAME_SNAKE, 250, &score2 };
-    LeaderboardList leaderboard = { &score1, 2 };
+    // Initialize and load leaderboard
+    LeaderboardList leaderboard = { NULL, 0 };
+
+    load_scores_from_file(&leaderboard);
 
     int choice;
 
@@ -103,10 +149,13 @@ int main(void) {
             printf("\nGenerating End-of-Day Score Audit Report...\n");
             ui_pause();
         } else if (choice == 5) {
+            save_scores_to_file(&leaderboard);
             printf("\nSaving and exiting Retro Arcade. Goodbye!\n");
             break;
         }
     }
+
+      free_leaderboard(&leaderboard);
 
     return 0;
 }
