@@ -38,6 +38,25 @@ void init_snake(GameSession *game) {
     spawn_food(game);
 }
 
+// Change snake direction
+void change_direction(GameSession *game, int new_direction) {
+
+    if (game->snake_head == NULL) {
+        return;
+    }
+
+    // Prevent reversing directly into itself
+    if ((game->direction == 0 && new_direction == 2) ||
+        (game->direction == 2 && new_direction == 0) ||
+        (game->direction == 1 && new_direction == 3) ||
+        (game->direction == 3 && new_direction == 1)) {
+
+        return;
+    }
+
+    game->direction = new_direction;
+}
+
 
 // Move the snake
 void move_snake(GameSession *game) {

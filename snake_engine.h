@@ -18,4 +18,7 @@ int check_collision(GameSession *game);
 // Free allocated snake memory
 void free_snake(GameSession *game);
 
+// Change snake direction
+void change_direction(GameSession *game, int new_direction);
+
 #endif // SNAKE_ENGINE_H

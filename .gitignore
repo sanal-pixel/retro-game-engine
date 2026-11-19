@@ -56,3 +56,5 @@ dkms.conf
 
 leaderboard.dat
 *.exe
+
+game_save.dat

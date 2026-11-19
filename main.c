@@ -5,6 +5,79 @@
 #include "ui_renderer.h"
 #include "snake_engine.h"
 #include "file_io.h"
+#include <conio.h>
+#include <windows.h>
+#include <ctype.h>
+
+void run_snake_controls(GameSession *session) {
+
+    printf("\nWASD = Move | SPACE = Pause/Resume");
+    printf(" | F = Save | Q = Quit\n");
+    Sleep(1500);
+
+    while (session->state != GAME_OVER) {
+
+        ui_clear_screen();
+        ui_print_snake_board(session, 20, 20);
+
+        printf("\nScore: %d", session->score);
+        printf("\nWASD: Move | SPACE: Pause/Resume");
+        printf(" | F: Save | Q: Quit\n");
+
+        // Check keyboard input
+        if (_kbhit()) {
+
+            char key = (char)tolower(_getch());
+
+            switch (key) {
+
+                case 'w':
+                    change_direction(session, 0);
+                    break;
+
+                case 'd':
+                    change_direction(session, 1);
+                    break;
+
+                case 's':
+                    change_direction(session, 2);
+                    break;
+
+                case 'a':
+                    change_direction(session, 3);
+                    break;
+
+                case ' ':
+                    session->state =
+                        (session->state == RUNNING) ? PAUSED : RUNNING;
+                    break;
+
+                case 'f':
+                    if (save_game_state(session)) {
+                        printf("\nGame saved!\n");
+                    } else {
+                        printf("\nUnable to save game!\n");
+                    }
+                    Sleep(700);
+                    break;
+
+                case 'q':
+                    session->state = GAME_OVER;
+                    break;
+            }
+        }
+
+        if (session->state == RUNNING) {
+            Sleep(150);
+            move_snake(session);
+        } else {
+            Sleep(50);
+        }
+    }
+
+    printf("\nGame Over! Final Score: %d\n", session->score);
+    ui_pause();
+}
 
 static void run_game_session(GameType type) {
     GameSession session;
@@ -55,6 +128,15 @@ static void run_game_session(GameType type) {
                 return;
             }
         }
+    }
+    if (session.type == GAME_SNAKE) {
+        run_snake_controls(&session);
+
+    if (session.snake_head != NULL) {
+        free_snake(&session);
+        }
+
+    return;
     }
 
     while (session.state != GAME_OVER) {
