@@ -1,10 +1,10 @@
+
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include "game.h"
 #include "ui_renderer.h"
+#include "snake_engine.h"
 #include "file_io.h"
-
 
 static void run_game_session(GameType type) {
     GameSession session;
@@ -28,10 +28,6 @@ static void run_game_session(GameType type) {
         }
     }
 
-    // Sample snake nodes for a new game
-    SnakeNode body_node = { {4, 5}, NULL };
-    SnakeNode head_node = { {5, 5}, &body_node };
-
     if (!loaded) {
         session.type = type;
         session.state = RUNNING;
@@ -51,12 +47,14 @@ static void run_game_session(GameType type) {
                 }
             }
         } else {
-            session.snake_head = &head_node;
-            session.food.x = 10;
-            session.food.y = 7;
+            init_snake(&session);
+
+            if (session.snake_head == NULL) {
+                printf("\nUnable to initialize Snake!\n");
+                ui_pause();
+                return;
+            }
         }
-    } else {
-        session.state = RUNNING;
     }
 
     while (session.state != GAME_OVER) {
@@ -65,7 +63,7 @@ static void run_game_session(GameType type) {
         if (session.type == GAME_TIC_TAC_TOE) {
             ui_print_ttt_board(&session);
         } else {
-            ui_print_snake_board(&session, 20, 15);
+            ui_print_snake_board(&session, 20, 20);
         }
 
         ui_print_game_menu(session.type);
@@ -73,50 +71,59 @@ static void run_game_session(GameType type) {
 
         if (action == -1) {
             break;
-        } else if (action == 1) {
+        }
+        else if (action == 1) {
             ui_pause();
-        } else if (action == 2) {
+        }
+        else if (action == 2) {
             if (session.state == PAUSED) {
                 printf("\nGame is paused! Resume it first.\n");
-            } else {
+            }
+            else if (session.type == GAME_SNAKE) {
+                move_snake(&session);
+            }
+            else {
                 session.moves++;
                 printf("\nMove registered!\n");
             }
+
             ui_pause();
-        } else if (action == 3) {
+        }
+        else if (action == 3) {
             if (session.state == RUNNING) {
                 session.state = PAUSED;
                 printf("\nGame Paused.\n");
-            } else if (session.state == PAUSED) {
+            }
+            else if (session.state == PAUSED) {
                 session.state = RUNNING;
                 printf("\nGame Resumed.\n");
             }
+
             ui_pause();
-        } else if (action == 4) {
+        }
+        else if (action == 4) {
             if (save_game_state(&session)) {
                 printf("\nGame Progress Saved Successfully!\n");
-            } else {
+            }
+            else {
                 printf("\nUnable to Save Game!\n");
             }
+
             ui_pause();
-        } else if (action == 5) {
+        }
+        else if (action == 5) {
             session.state = GAME_OVER;
             printf("\nGame Over! Final Score: %d\n", session.score);
             ui_pause();
-        } else if (action == 6) {
+        }
+        else if (action == 6) {
             break;
         }
     }
 
-    // Free memory only when a saved game was loaded
-    if (loaded) {
-        SnakeNode *current = session.snake_head;
-
-        while (current != NULL) {
-            SnakeNode *temp = current;
-            current = current->next;
-            free(temp);
-        }
+    // Free Snake memory before leaving the session
+    if (session.snake_head != NULL) {
+        free_snake(&session);
     }
 }
 
@@ -137,25 +144,30 @@ int main(void) {
 
         if (choice == -1) {
             break;
-        } else if (choice == 1) {
+        }
+        else if (choice == 1) {
             run_game_session(GAME_TIC_TAC_TOE);
-        } else if (choice == 2) {
+        }
+        else if (choice == 2) {
             run_game_session(GAME_SNAKE);
-        } else if (choice == 3) {
+        }
+        else if (choice == 3) {
             ui_clear_screen();
             ui_print_leaderboard(&leaderboard);
             ui_pause();
-        } else if (choice == 4) {
+        }
+        else if (choice == 4) {
             printf("\nGenerating End-of-Day Score Audit Report...\n");
             ui_pause();
-        } else if (choice == 5) {
+        }
+        else if (choice == 5) {
             save_scores_to_file(&leaderboard);
             printf("\nSaving and exiting Retro Arcade. Goodbye!\n");
             break;
         }
     }
 
-      free_leaderboard(&leaderboard);
+    free_leaderboard(&leaderboard);
 
     return 0;
 }
